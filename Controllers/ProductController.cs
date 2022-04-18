@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShopCSharp_API.Data;
@@ -14,6 +15,7 @@ namespace ShopCSharp_API.Controllers
   {
     [HttpGet]
     [Route("")]
+    [AllowAnonymous]
     public async Task<ActionResult<List<Product>>> Get([FromServices] DataContext context)
     {
       var products = await context
@@ -26,6 +28,7 @@ namespace ShopCSharp_API.Controllers
 
     [HttpGet]
     [Route("{id:int}")] // Ele entende que isso é um parâmetro inteiro
+    [AllowAnonymous]
     public async Task<ActionResult<Product>> GetById(int id,
    [FromServices] DataContext context)
     {
@@ -39,6 +42,7 @@ namespace ShopCSharp_API.Controllers
 
     [HttpGet]
     [Route("{categories/id:int}")] // Ele entende que isso é um parâmetro inteiro
+    [AllowAnonymous]
     public async Task<ActionResult<List<Product>>> GetByCategory([FromServices] DataContext context, int id)
     {
       var products = await context
@@ -52,7 +56,8 @@ namespace ShopCSharp_API.Controllers
 
     [HttpPost]
     [Route("")]
-    public async Task<ActionResult<List<Product>>> Post(
+    [Authorize(Roles = "employee")]
+    public async Task<ActionResult<Product>> Post(
     [FromBody] Product model,
     [FromServices] DataContext context)
     {
@@ -65,7 +70,7 @@ namespace ShopCSharp_API.Controllers
       {
         context.Products.Add(model);
         await context.SaveChangesAsync();
-        return Ok(model);
+        return model;
       }
       catch
       {
