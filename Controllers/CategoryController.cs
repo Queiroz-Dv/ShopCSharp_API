@@ -1,50 +1,117 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ShopCSharp_API.Data;
+using ShopCSharp_API.Models;
 
 // Endpoint é uma URL
-// https://localhost:5001/categories/
+// https://localhost:5001/categories/ //
 namespace ShopCSharp_API.Controllers
 {
-  [Route("categories")]
-  public class CategoryController : ControllerBase
+  [Route("v1/categories")]
+  public class CategoryController : Controller
   {
     [HttpGet]
     [Route("")]
-    public string Get()
+    [AllowAnonymous]
+    [ResponseCache(VaryByHeader = "User-Agent", Location = ResponseCacheLocation.Any, Duration = 30)]
+    public async Task<ActionResult<List<Category>>> Get([FromServices] DataContext context)
     {
-      return "Método Get";
+      var categories = await context.Categories.AsNoTracking().ToListAsync();
+      return Ok(categories);
     }
 
     [HttpGet]
     [Route("{id:int}")] // Ele entende que isso é um parâmetro inteiro
-    public string GetById(int id)
+    [AllowAnonymous]
+    public async Task<ActionResult<Category>> GetById(int id,
+    [FromServices] DataContext context)
     {
-      return "Método GetById" + id.ToString();
+      var category = await context.Categories.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+      return category;
     }
 
     [HttpPost]
     [Route("")]
-    public string Post()
+    //[Authorize(Roles = "employee")]
+    [AllowAnonymous]
+    public async Task<ActionResult<Category>> Post
+    ([FromBody] Category model, [FromServices] DataContext context)
     {
-      return "Método Post!";
+      if (!ModelState.IsValid) // Model State verifica se o que está no model é válido
+      {
+        return BadRequest(ModelState);
+      }
+
+      try
+      {
+        context.Categories.Add(model);
+        await context.SaveChangesAsync();
+        return model;
+      }
+      catch (Exception)
+      {
+        return BadRequest(new { message = "Não foi possível criar a categoria" });
+      }
     }
 
     [HttpPut]
-    [Route("")]
-    public string Put()
+    [Route("{id:int}")]
+    [Authorize(Roles = "employee")]
+    public async Task<ActionResult<Category>> Put
+    (int id,
+    [FromBody] Category model,
+    [FromServices] DataContext context)
     {
-      return "Método Put!";
+      // Verifica se o Id informado é o mesmo do modelo
+      if (id != model.Id)
+      {
+        return NotFound(new { message = "Categoria não encontrada" });
+      }
+
+      // Verifica os dados
+      if (!ModelState.IsValid)
+      {
+        return BadRequest(ModelState);
+      }
+      try
+      {
+        context.Entry<Category>(model).State = EntityState.Modified;
+        await context.SaveChangesAsync();
+        return model;
+      }
+      catch (DbUpdateConcurrencyException)
+      {
+        return BadRequest(new { message = "Não foi possível atualizar a categoria" });
+      }
     }
 
     [HttpDelete]
-    [Route("")]
-    public string Delete()
+    [Route("{id:int}")]
+    [Authorize(Roles = "employee")]
+    public async Task<ActionResult<Category>> Delete(
+      int id,
+      [FromServices] DataContext context)
     {
-      return "Método Delete!";
+      var category = await context.Categories.FirstOrDefaultAsync(x => x.Id == id);
+      if (category == null)
+      {
+        return NotFound(new { message = "Categoria não encontrada" });
+      }
+
+      try
+      {
+        context.Categories.Remove(category);
+        await context.SaveChangesAsync();
+        return category;
+      }
+      catch (Exception)
+      {
+        return BadRequest(new { message = "Não foi possível remover a categoria" });
+      }
     }
   }
 }
