@@ -15,14 +15,15 @@ namespace ShopCSharp_API.Services
       var key = Encoding.ASCII.GetBytes(Settings.Secret); // Precisa da chave
       var tokenDescriptor = new SecurityTokenDescriptor // Descrição do que vai ter no token
       {
-        Subject = new ClaimsIdentity(new Claim[]{
-              new Claim(ClaimTypes.Name, user.Id.ToString()),
+        Subject = new ClaimsIdentity(new Claim[]
+        {
+              new Claim(ClaimTypes.Name, user.Username.ToString()),
               new Claim(ClaimTypes.Role, user.Role.ToString())
           }),
         Expires = DateTime.UtcNow.AddHours(2), // Tempo de expiração por duas horas
         SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
       };
-      
+
       var token = tokenHandler.CreateToken(tokenDescriptor); // Manda criar token
       return tokenHandler.WriteToken(token); // Retorna token
     }

@@ -10,8 +10,8 @@ using ShopCSharp_API.Models;
 
 namespace ShopCSharp_API.Controllers
 {
-  [Route("products")]
-  public class ProductController : ControllerBase
+  [Route("v1/products")]
+  public class ProductController : Controller
   {
     [HttpGet]
     [Route("")]
@@ -41,7 +41,7 @@ namespace ShopCSharp_API.Controllers
     }
 
     [HttpGet]
-    [Route("{categories/id:int}")] // Ele entende que isso é um parâmetro inteiro
+    [Route("{categories/{id:int}")] // Ele entende que isso é um parâmetro inteiro
     [AllowAnonymous]
     public async Task<ActionResult<List<Product>>> GetByCategory([FromServices] DataContext context, int id)
     {
@@ -61,20 +61,15 @@ namespace ShopCSharp_API.Controllers
     [FromBody] Product model,
     [FromServices] DataContext context)
     {
-      if (!ModelState.IsValid) // Model State verifica se o que está no model é válido
-      {
-        return BadRequest(ModelState);
-      }
-
-      try
+      if (ModelState.IsValid)
       {
         context.Products.Add(model);
         await context.SaveChangesAsync();
         return model;
       }
-      catch
+      else
       {
-        return BadRequest(new { message = "Categoria não encontrada" });
+        return BadRequest(ModelState);
       }
     }
   }

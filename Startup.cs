@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ShopCSharp_API.Data;
+using System.Linq;
 using System.Text;
 
 namespace ShopCSharp_API
@@ -23,6 +25,15 @@ namespace ShopCSharp_API
 
     public void ConfigureServices(IServiceCollection services)
     {
+      services.AddCors();
+
+      services.AddResponseCompression(options =>
+      {
+        options.Providers.Add<GzipCompressionProvider>(); // Vai comprimir o Json antes de mandar pra tela
+        options.MimeTypes = // Diz pra ele que quer comprimir tudo que for application/json
+        ResponseCompressionDefaults.MimeTypes.Concat(new[] { "application/json" });
+      });
+      // services.AddResponseCaching();
       services.AddControllers();
 
       var key = Encoding.ASCII.GetBytes(Settings.Secret);
@@ -43,31 +54,32 @@ namespace ShopCSharp_API
         };
       });
 
-      //services.AddDbContext<DataContext>(opt => opt.UseInMemoryDatabase("ShopApi"));
-      services.AddDbContext<DataContext>(
-        opt => opt.UseSqlServer(Configuration.GetConnectionString("connectionString")));
-      services.AddScoped<DataContext, DataContext>();
+      services.AddDbContext<DataContext>(opt => opt.UseInMemoryDatabase("ShopApi"));
+      //services.AddDbContext<DataContext>(opt => opt.UseSqlServer(Configuration.GetConnectionString("connectionString")));
       services.AddSwaggerGen(c =>
       {
-        c.SwaggerDoc("v1", new OpenApiInfo { Title = "ShopCSharp_API", Version = "v1" });
+        c.SwaggerDoc("v1", new OpenApiInfo { Title = "Shop API", Version = "v1" });
       });
     }
 
-    public void Configure(
-        IApplicationBuilder app,
-        IWebHostEnvironment env)
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
       if (env.IsDevelopment())
       {
         app.UseDeveloperExceptionPage();
-        app.UseSwagger();
-        app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ShopCSharp_API v1"));
       }
-
-      app.UseHttpsRedirection();
-
+      app.UseSwagger();
+      app.UseSwaggerUI(c =>
+      {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ShopCSharp_API v1");
+      });
       app.UseRouting();
-      
+
+      //Global Cors
+      app.UseCors(x => x
+      .AllowAnyOrigin()
+      .AllowAnyMethod()
+      .AllowAnyHeader());
       app.UseAuthentication();
       app.UseAuthorization();
 
